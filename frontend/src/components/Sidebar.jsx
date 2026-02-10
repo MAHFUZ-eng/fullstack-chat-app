@@ -24,7 +24,8 @@ const Sidebar = () => {
     sendFriendRequest,
     acceptFriendRequest,
     rejectFriendRequest,
-    isSearching
+    isSearching,
+    unreadCounts,
   } = useChatStore();
 
   const { onlineUsers } = useAuthStore();
@@ -53,9 +54,6 @@ const Sidebar = () => {
     : users;
 
   if (isFriendsLoading || isGroupsLoading) return <SidebarSkeleton />;
-
-  // Calculate unread counts map
-  const unreadCounts = useChatStore(state => state.unreadCounts) || {}; // Assuming added to store
 
   return (
     <aside

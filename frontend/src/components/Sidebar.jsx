@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
-import { Users, Plus, Search, UserPlus, Check, X } from "lucide-react";
+import { Users, Plus, Search, UserPlus, Check, X, ArrowLeft } from "lucide-react";
 import CreateGroupModal from "./CreateGroupModal.jsx";
 
 const Sidebar = () => {
+  // ... (store destructuring)
   const {
     getFriends,
     users,
@@ -25,14 +26,20 @@ const Sidebar = () => {
     acceptFriendRequest,
     rejectFriendRequest,
     isSearching,
-    unreadCounts,
+    // unreadCounts removed as it was duplicate, but I need it back if I deleted both? 
+    // Step 266 removed the second one. Step 252 added it. Original had one?
+    // Let's check store destructuring lines 9-29.
   } = useChatStore();
+
+  // Calculate unread counts map (Added back if missing or just rely on store)
+  const unreadCounts = useChatStore(state => state.unreadCounts) || {};
 
   const { onlineUsers } = useAuthStore();
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSearchBarOpen, setIsSearchBarOpen] = useState(false);
 
   useEffect(() => {
     getFriends();
@@ -72,29 +79,56 @@ const Sidebar = () => {
         bg-base-100
       `}
     >
-      {/* WhatsApp-style Header (Only visible on mobile or when open on desktop) */}
       <div className={`
           ${isSidebarOpen || "lg:block"} 
           ${!isSidebarOpen && "lg:hidden"}
           bg-base-100 pb-2
       `}>
-        <div className="flex items-center justify-between px-4 py-3">
-          <span className="text-xl font-bold">Chatty</span>
-          <div className="flex items-center gap-4">
-            <button className="btn btn-ghost btn-circle btn-sm"><Search className="size-5" /></button>
-            {/* Desktop Toggle Button moved here for cleaner UI */}
-            <button onClick={toggleSidebar} className="hidden lg:flex btn btn-ghost btn-circle btn-sm">
-              {isSidebarOpen ? <X className="size-5" /> : <Search className="size-5" />}
-            </button>
-          </div>
-        </div>
+        {/* Header or Search Input */}
+        {isSidebarOpen && searchQuery !== "" || isSidebarOpen && document.activeElement?.tagName === "INPUT" ? (
+          // Logic simplified: If searching, show input. But simpler is just a toggle state.
+          // Let's use a local state for UI toggle if needed, or just always show input if it has value?
+          // WhatsApp hides title and shows input.
+          null
+        ) : null}
 
-        {/* Filters */}
-        <div className="flex gap-2 px-4 pb-2 overflow-x-auto no-scrollbar">
-          <button className="btn btn-xs rounded-full btn-active normal-case">All</button>
-          <button className="btn btn-xs rounded-full btn-ghost bg-base-200 normal-case">Unread</button>
-          <button className="btn btn-xs rounded-full btn-ghost bg-base-200 normal-case">Groups</button>
-        </div>
+        {!isSearchBarOpen ? (
+          <div className="flex items-center justify-between px-4 py-3">
+            <span className="text-xl font-bold">Chatty</span>
+            <div className="flex items-center gap-4">
+              <button onClick={() => setIsSearchBarOpen(true)} className="btn btn-ghost btn-circle btn-sm">
+                <Search className="size-5" />
+              </button>
+              {/* Desktop Toggle (Expand/Collapse Sidebar) */}
+              <button onClick={toggleSidebar} className="hidden lg:flex btn btn-ghost btn-circle btn-sm">
+                {isSidebarOpen ? <X className="size-5" /> : <Search className="size-5" />}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 px-2 py-3">
+            <button onClick={() => { setIsSearchBarOpen(false); setSearchQuery(""); }} className="btn btn-ghost btn-circle btn-sm">
+              <ArrowLeft className="size-5" />
+            </button>
+            <input
+              type="text"
+              placeholder="Search..."
+              className="input input-sm input-bordered w-full rounded-full"
+              value={searchQuery}
+              onChange={handleSearch}
+              autoFocus
+            />
+          </div>
+        )}
+
+        {/* Filters (Hide when searching) */}
+        {!isSearchBarOpen && (
+          <div className="flex gap-2 px-4 pb-2 overflow-x-auto no-scrollbar">
+            <button className="btn btn-xs rounded-full btn-active normal-case">All</button>
+            <button className="btn btn-xs rounded-full btn-ghost bg-base-200 normal-case">Unread</button>
+            <button className="btn btn-xs rounded-full btn-ghost bg-base-200 normal-case">Groups</button>
+          </div>
+        )}
       </div>
 
       {/* Divider */}

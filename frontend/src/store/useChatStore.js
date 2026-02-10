@@ -157,7 +157,10 @@ export const useChatStore = create((set, get) => ({
 
   removeGroupMember: async (groupId, userId) => {
     try {
-      const res = await axiosInstance.post(`/groups/${groupId}/remove`, { userId });
+      const res = await axiosInstance.post(`/groups/${groupId}/remove`, { userId }); // Correct endpoint? Previously I assumed remove endpoint exists.
+      // Wait, I am just pasting what I saw. I need to be careful.
+      // In useChatStore view, line 158~169 was removeGroupMember.
+      // I will append new actions after it.
       set({
         groups: get().groups.map((group) => (group._id === groupId ? res.data : group)),
         selectedGroup: get().selectedGroup?._id === groupId ? res.data : get().selectedGroup,
@@ -167,4 +170,84 @@ export const useChatStore = create((set, get) => ({
       toast.error(error.response.data.message);
     }
   },
+
+  // Friend System Actions
+  friendRequests: [],
+  searchResults: [],
+  isFriendsLoading: false,
+  isSearching: false,
+
+  getFriends: async () => {
+    set({ isFriendsLoading: true });
+    try {
+      const res = await axiosInstance.get("/friends");
+      set({ users: res.data }); // Updating 'users' with friends to show in sidebar
+    } catch (error) {
+      toast.error(error.response.data.message);
+    } finally {
+      set({ isFriendsLoading: false });
+    }
+  },
+
+  getFriendRequests: async () => {
+    try {
+      const res = await axiosInstance.get("/friends/requests");
+      set({ friendRequests: res.data });
+    } catch (error) {
+      toast.error(error.response.data.message);
+    }
+  },
+
+  searchUsers: async (query) => {
+    set({ isSearching: true });
+    try {
+      const res = await axiosInstance.get(`/friends/search?query=${query}`);
+      set({ searchResults: res.data });
+    } catch (error) {
+      toast.error(error.response.data.message);
+    } finally {
+      set({ isSearching: false });
+    }
+  },
+
+  sendFriendRequest: async (receiverId) => {
+    try {
+      const res = await axiosInstance.post("/friends/request", { receiverId });
+      // Update search result status
+      set({
+        searchResults: get().searchResults.map(user =>
+          user._id === receiverId ? { ...user, requestStatus: 'sent' } : user
+        )
+      });
+      toast.success("Friend request sent");
+    } catch (error) {
+      toast.error(error.response.data.message);
+    }
+  },
+
+  acceptFriendRequest: async (requestId) => {
+    try {
+      const res = await axiosInstance.post("/friends/accept", { requestId });
+      set({
+        friendRequests: get().friendRequests.filter(req => req._id !== requestId)
+      });
+      toast.success("Friend request accepted");
+      get().getFriends(); // Refresh friends list
+    } catch (error) {
+      toast.error(error.response.data.message);
+    }
+  },
+
+  rejectFriendRequest: async (requestId) => {
+    try {
+      await axiosInstance.post("/friends/reject", { requestId });
+      set({
+        friendRequests: get().friendRequests.filter(req => req._id !== requestId)
+      });
+      toast.success("Friend request rejected");
+    } catch (error) {
+      toast.error(error.response.data.message);
+    }
+  },
+
 }));

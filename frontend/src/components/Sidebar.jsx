@@ -53,6 +53,16 @@ const Sidebar = () => {
     ? users.filter((user) => onlineUsers.includes(user._id))
     : users;
 
+  // Calculate unread counts map
+  const unreadCounts = useChatStore(state => state.unreadCounts) || {};
+
+  // Format time helper
+  const formatTime = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   if (isFriendsLoading || isGroupsLoading) return <SidebarSkeleton />;
 
   return (
@@ -60,134 +70,131 @@ const Sidebar = () => {
       className={`
         h-full border-r border-base-300 flex flex-col transition-all duration-200
         w-full ${isSidebarOpen ? "lg:w-72" : "lg:w-20"}
+        bg-base-100
       `}
     >
-      <div className="border-b border-base-300 w-full p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Users className="size-6" />
-            <span className={`font-medium ${isSidebarOpen ? "block" : "hidden lg:block"} lg:block ${!isSidebarOpen && "lg:hidden"}`}>Chats</span>
-            {/* Logic: Always show on mobile. On desktop, show only if open. */}
-            {/* Simplified: block ${!isSidebarOpen && "lg:hidden"} */}
-          </div>
-          {/* Desktop Toggle Button */}
-          <button
-            onClick={toggleSidebar}
-            className="hidden lg:flex btn btn-circle btn-ghost btn-xs"
-          >
-            {isSidebarOpen ? <X className="size-5" /> : <Search className="size-5" />}
-          </button>
-        </div>
-
-        {/* Search Bar - Always visible mobile, toggle desktop */}
-        <div className={`relative w-full block ${!isSidebarOpen && "lg:hidden"}`}>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search users..."
-              className="input input-sm input-bordered w-full pr-8"
-              value={searchQuery}
-              onChange={handleSearch}
-            />
-            <Search className="size-4 absolute right-2 top-2.5 text-zinc-400" />
+      {/* WhatsApp-style Header (Only visible on mobile or when open on desktop) */}
+      <div className={`
+          ${isSidebarOpen || "lg:block"} 
+          ${!isSidebarOpen && "lg:hidden"}
+          bg-base-100 pb-2
+      `}>
+        <div className="flex items-center justify-between px-4 py-3">
+          <span className="text-xl font-bold">Chatty</span>
+          <div className="flex items-center gap-4">
+            <button className="btn btn-ghost btn-circle btn-sm"><Search className="size-5" /></button>
+            {/* Desktop Toggle Button moved here for cleaner UI */}
+            <button onClick={toggleSidebar} className="hidden lg:flex btn btn-ghost btn-circle btn-sm">
+              {isSidebarOpen ? <X className="size-5" /> : <Search className="size-5" />}
+            </button>
           </div>
         </div>
 
-        {/* ... (Create Group Mobile logic removed as sidebar is full width) ... */}
-        {/* We can keep the Desktop create group button inside the "Chats" header or floating */}
-
-        {/* Helper for large screen create group (when sidebar is inherently open or closed?) */}
-        {/* Let's put it in the header row for consistency */}
-        <div className={`hidden lg:flex justify-end absolute top-5 right-5 ${!isSidebarOpen && "hidden"}`}>
-          <button
-            onClick={() => setShowCreateGroupModal(true)}
-            className="btn btn-ghost btn-xs lg:btn-sm btn-circle"
-            title="Create Group"
-          >
-            <Plus className="size-5" />
-          </button>
+        {/* Filters */}
+        <div className="flex gap-2 px-4 pb-2 overflow-x-auto no-scrollbar">
+          <button className="btn btn-xs rounded-full btn-active normal-case">All</button>
+          <button className="btn btn-xs rounded-full btn-ghost bg-base-200 normal-case">Unread</button>
+          <button className="btn btn-xs rounded-full btn-ghost bg-base-200 normal-case">Groups</button>
         </div>
-
-        {/* Online filter */}
-        {!searchQuery && (
-          <div className={`mt-3 flex items-center gap-2 block ${!isSidebarOpen && "lg:hidden"}`}>
-            <label className="cursor-pointer flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={showOnlineOnly}
-                onChange={(e) => setShowOnlineOnly(e.target.checked)}
-                className="checkbox checkbox-sm"
-              />
-              <span className="text-sm">Show online only</span>
-            </label>
-            <span className="text-xs text-zinc-500">({onlineUsers.length - 1} online)</span>
-          </div>
-        )}
       </div>
 
-      <div className="overflow-y-auto w-full py-3">
+      {/* Divider */}
+      <div className="h-[1px] bg-base-200 w-full mb-1"></div>
+
+      <div className="overflow-y-auto w-full flex-1">
         {/* Search Results */}
         {searchQuery && (
           <div className="mb-4">
-            {/* ... Search results logic ... */}
-            {/* Using simplified class logic */}
-            <div className={`px-5 text-xs text-zinc-500 font-semibold mb-2 uppercase block ${!isSidebarOpen && "lg:hidden"}`}>Search Results</div>
-            {/* ... */}
+            {/* ... Search results logic (keep simplified) ... */}
+            <div className="px-5 text-xs text-zinc-500 font-semibold mb-2 uppercase">Search Results</div>
+            {/* ... (Search implementations) ... */}
           </div>
         )}
 
-        {/* ... (Friend Requests & Groups logic similar update) ... */}
+        {/* ... (Friend Requests logic) ... */}
 
-        {/* Contacts (Friends) */}
+        {/* Contacts (Friends) List - WhatsApp Style */}
         {!searchQuery && (
-          <>
-            <div className={`px-5 text-xs text-zinc-500 font-semibold mb-2 uppercase block ${!isSidebarOpen && "lg:hidden"}`}>Friends</div>
+          <div className="flex flex-col">
+            {filteredUsers.map((user) => {
+              const lastMsg = user.lastMessage;
+              const isUnread = unreadCounts[user._id] > 0;
 
-            {filteredUsers.map((user) => (
-              <button
-                key={user._id}
-                onClick={() => setSelectedUser(user)}
-                className={`
-                    w-full p-3 flex items-center gap-3
-                    hover:bg-base-300 transition-colors
-                    ${selectedUser?._id === user._id ? "bg-base-300 ring-1 ring-base-300" : ""}
+              return (
+                <button
+                  key={user._id}
+                  onClick={() => setSelectedUser(user)}
+                  className={`
+                        w-full p-3 flex items-center gap-3
+                        hover:bg-base-200 transition-colors
+                        relative
+                        ${selectedUser?._id === user._id ? "bg-base-200" : ""}
                     `}
-              >
-                <div className="relative mx-auto lg:mx-0">
-                  <img
-                    src={user.profilePic || "/avatar.png"}
-                    alt={user.name}
-                    className="size-12 object-cover rounded-full"
-                  />
-                  {onlineUsers.includes(user._id) && (
-                    <span
-                      className="absolute bottom-0 right-0 size-3 bg-green-500 
-                        rounded-full ring-2 ring-zinc-900"
+                >
+                  <div className="relative">
+                    <img
+                      src={user.profilePic || "/avatar.png"}
+                      alt={user.name}
+                      className="size-12 object-cover rounded-full"
                     />
-                  )}
-                  {/* Notification Badge */}
-                  {unreadCounts[user._id] > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full size-5 flex items-center justify-center">
-                      {unreadCounts[user._id]}
-                    </span>
-                  )}
-                </div>
-
-                <div className={`text-left min-w-0 block ${!isSidebarOpen && "lg:hidden"}`}>
-                  <div className="font-medium truncate">{user.fullName}</div>
-                  <div className="text-sm text-zinc-400">
-                    {onlineUsers.includes(user._id) ? "Online" : "Offline"}
+                    {onlineUsers.includes(user._id) && (
+                      <span
+                        className="absolute bottom-0 right-0 size-3 bg-green-500 
+                            rounded-full ring-2 ring-white dark:ring-zinc-900"
+                      />
+                    )}
                   </div>
-                </div>
-              </button>
-            ))}
 
-            {/* ... */}
-          </>
+                  <div className={`flex-1 min-w-0 flex flex-col justify-center ${!isSidebarOpen && "lg:hidden"}`}>
+                    <div className="flex justify-between items-baseline">
+                      <h3 className="font-semibold text-base truncate">{user.fullName}</h3>
+                      <span className={`text-xs ${isUnread ? "text-green-500 font-medium" : "text-zinc-500"}`}>
+                        {lastMsg ? formatTime(lastMsg.createdAt) : ""}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center mt-0.5">
+                      <p className="text-sm text-zinc-500 truncate pr-2 flex items-center gap-1">
+                        {lastMsg?.senderId !== user._id && lastMsg && (
+                          <Check className="size-3 text-blue-500 inline" />
+                          // Dummy 'read' check for now, standard logic later
+                        )}
+                        {lastMsg ? (
+                          lastMsg.text || (lastMsg.image ? "📷 Photo" : "🎤 Audio")
+                        ) : (
+                          <span className="italic text-xs">No messages yet</span>
+                        )}
+                      </p>
+
+                      {isUnread && (
+                        <span className="bg-green-500 text-white text-[10px] font-bold h-5 min-w-5 rounded-full flex items-center justify-center px-1">
+                          {unreadCounts[user._id]}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         )}
       </div>
-      {/* ... */}
+
+      {/* Floating Action Button (Mobile Only) */}
+      <div className={`absolute bottom-6 right-6 lg:hidden ${searchQuery ? "hidden" : "block"}`}>
+        <button
+          onClick={() => setShowCreateGroupModal(true)} // Or open search for new chat
+          className="btn btn-circle btn-primary size-14 shadow-lg text-white"
+        >
+          <Plus className="size-6" />
+        </button>
+      </div>
+
+      {showCreateGroupModal && (
+        <CreateGroupModal onClose={() => setShowCreateGroupModal(false)} />
+      )}
     </aside>
   );
 };
 export default Sidebar;
+```

@@ -53,8 +53,7 @@ const Sidebar = () => {
     ? users.filter((user) => onlineUsers.includes(user._id))
     : users;
 
-  // Calculate unread counts map
-  const unreadCounts = useChatStore(state => state.unreadCounts) || {};
+
 
   // Format time helper
   const formatTime = (dateString) => {
@@ -197,4 +196,3 @@ const Sidebar = () => {
   );
 };
 export default Sidebar;
-```

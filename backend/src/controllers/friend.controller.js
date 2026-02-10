@@ -1,7 +1,6 @@
 import User from "../models/user.model.js";
 import FriendRequest from "../models/friendRequest.model.js";
-import Link from "mongoose"; // Mistake? No.
-// Wait, I should add import Message at the top.
+
 import Message from "../models/message.model.js";
 import mongoose from "mongoose";
 
@@ -180,9 +179,44 @@ export const rejectFriendRequest = async (req, res) => {
     }
 };
 
-res.status(200).json(friendsWithLastMessage);
+
+export const getFriends = async (req, res) => {
+    try {
+        const currentUserId = req.user._id;
+        const user = await User.findById(currentUserId).populate("friends", "-password");
+
+        const friendsWithLastMessage = await Promise.all(
+            user.friends.map(async (friend) => {
+                const lastMessage = await Message.findOne({
+                    $or: [
+                        { senderId: currentUserId, receiverId: friend._id },
+                        { senderId: friend._id, receiverId: currentUserId }
+                    ]
+                }).sort({ createdAt: -1 });
+
+                return {
+                    ...friend.toObject(),
+                    lastMessage: lastMessage ? {
+                        text: lastMessage.text,
+                        image: lastMessage.image,
+                        audioUrl: lastMessage.audioUrl,
+                        senderId: lastMessage.senderId,
+                        createdAt: lastMessage.createdAt
+                    } : null
+                };
+            })
+        );
+
+        // Sort friends by last message time (most recent first)
+        friendsWithLastMessage.sort((a, b) => {
+            const dateA = a.lastMessage ? new Date(a.lastMessage.createdAt) : new Date(0);
+            const dateB = b.lastMessage ? new Date(b.lastMessage.createdAt) : new Date(0);
+            return dateB - dateA;
+        });
+
+        res.status(200).json(friendsWithLastMessage);
     } catch (error) {
-    console.error("Error in getFriends: ", error.message);
-    res.status(500).json({ error: "Internal server error" });
-}
+        console.error("Error in getFriends: ", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
 }

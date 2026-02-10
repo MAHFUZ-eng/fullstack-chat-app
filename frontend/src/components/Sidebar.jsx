@@ -181,7 +181,7 @@ const Sidebar = () => {
         {/* Friend Requests */}
         {!searchQuery && friendRequests.length > 0 && (
           <div className="mb-4 border-b border-base-200 pb-2">
-            <div className={`px-5 text-xs text-zinc-500 font-semibold mb-2 uppercase ${isSidebarOpen ? "block" : "hidden lg:block"}`}>Friend Requests</div>
+            <div className={`px-5 text-xs text-zinc-500 font-semibold mb-2 uppercase block ${!isSidebarOpen && "lg:hidden"}`}>Friend Requests</div>
             {friendRequests.map((req) => (
               <div key={req._id} className="w-full p-3 flex items-center justify-between hover:bg-base-200 transition-colors">
                 <div className="flex items-center gap-3 overflow-hidden">
@@ -190,7 +190,7 @@ const Sidebar = () => {
                     alt={req.sender.fullName}
                     className="size-10 object-cover rounded-full"
                   />
-                  <div className={`text-left min-w-0 ${isSidebarOpen ? "block" : "hidden lg:block"}`}>
+                  <div className={`text-left min-w-0 block ${!isSidebarOpen && "lg:hidden"}`}>
                     <div className="font-medium truncate">{req.sender.fullName}</div>
                   </div>
                 </div>

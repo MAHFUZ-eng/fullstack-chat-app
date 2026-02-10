@@ -3,11 +3,13 @@ import { X, Info, ArrowLeft } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import GroupDetailsModal from "./GroupDetailsModal";
+import UserDetailsModal from "./UserDetailsModal";
 
 const ChatHeader = () => {
   const { selectedUser, setSelectedUser, selectedGroup, setSelectedGroup } = useChatStore();
   const { onlineUsers } = useAuthStore();
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showUserDetailsModal, setShowUserDetailsModal] = useState(false);
 
   const handleClose = () => {
     setSelectedUser(null);
@@ -58,7 +60,7 @@ const ChatHeader = () => {
   return (
     <div className="p-2.5 border-b border-base-300">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setShowUserDetailsModal(true)}>
           {/* Avatar */}
           <div className="avatar">
             <div className="size-10 rounded-full relative">
@@ -81,6 +83,10 @@ const ChatHeader = () => {
           <X className="size-5 hidden lg:block" />
         </button>
       </div>
+
+      {showUserDetailsModal && (
+        <UserDetailsModal onClose={() => setShowUserDetailsModal(false)} />
+      )}
     </div>
   );
 };

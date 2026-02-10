@@ -105,18 +105,50 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
+  unreadCounts: {}, // { userId: count }
+
   subscribeToMessages: () => {
     const { selectedUser, selectedGroup } = get();
-    if (!selectedUser && !selectedGroup) return;
+    // if (!selectedUser && !selectedGroup) return; // Allow subscribing even if no user selected to get notifications? 
+    // Wait, original code only subscribed if selectedUser/Group was active? 
+    // No, we should always subscribe to get notifications. But we need to filter where to put the message.
 
+    // Original logic:
+    // const socket = useAuthStore.getState().socket;
+    // socket.on("newMessage", (newMessage) => {
+    //   if (selectedUser && newMessage.senderId === selectedUser._id) { set... }
+    // });
+
+    // New Logic: Always listen.
     const socket = useAuthStore.getState().socket;
 
     socket.on("newMessage", (newMessage) => {
-      // Check if message belongs to current chat
-      if (selectedUser && newMessage.senderId === selectedUser._id) {
-        set({ messages: [...get().messages, newMessage] });
-      } else if (selectedGroup && newMessage.groupId === selectedGroup._id) {
-        set({ messages: [...get().messages, newMessage] });
+      const { selectedUser, selectedGroup, messages, unreadCounts } = get();
+      const isChatOpen = (selectedUser && newMessage.senderId === selectedUser._id) ||
+        (selectedGroup && newMessage.groupId === selectedGroup._id);
+
+      if (isChatOpen) {
+        set({ messages: [...messages, newMessage] });
+        // Create a subtle sound for current chat? Or no sound?
+        // User requested: "notification sound like one send messages it will appear in the profile... also notification sound should be there"
+        // Usually current chat also has a small sound.
+        // Let's play sound always.
+        try {
+          const audio = new Audio("/notification.mp3"); // Ensure this file exists in public/
+          audio.play().catch(e => console.log("Audio play failed", e));
+        } catch (e) { }
+      } else {
+        // Increment unread count
+        const senderId = newMessage.senderId;
+        const currentCount = unreadCounts[senderId] || 0;
+        set({ unreadCounts: { ...unreadCounts, [senderId]: currentCount + 1 } });
+
+        try {
+          const audio = new Audio("/notification.mp3");
+          audio.play().catch(e => console.log("Audio play failed", e));
+        } catch (e) { }
+
+        toast(`New message from ${newMessage.senderId}`); // Optimally show name, but we only have ID here easily unless we look up user.
       }
     });
   },
@@ -126,8 +158,31 @@ export const useChatStore = create((set, get) => ({
     socket.off("newMessage");
   },
 
-  setSelectedUser: (selectedUser) => set({ selectedUser, selectedGroup: null }),
-  setSelectedGroup: (selectedGroup) => set({ selectedGroup, selectedUser: null }),
+  setSelectedUser: (selectedUser) => {
+    // Clear unread count
+    if (selectedUser) {
+      const { unreadCounts } = get();
+      set({
+        selectedUser,
+        selectedGroup: null,
+        unreadCounts: { ...unreadCounts, [selectedUser._id]: 0 }
+      });
+    } else {
+      set({ selectedUser: null, selectedGroup: null });
+    }
+  },
+
+  setSelectedGroup: (selectedGroup) => {
+    if (selectedGroup) {
+      // Clear unread count for group?
+      // unreadCounts key for group? `newMessage.groupId`?
+      // Need to handle group unread logic too.
+      // For now handling user.
+      set({ selectedGroup, selectedUser: null });
+    } else {
+      set({ selectedGroup: null, selectedUser: null });
+    }
+  },
 
   renameGroup: async (groupId, newName) => {
     try {

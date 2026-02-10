@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, Info } from "lucide-react";
+import { X, Info, ArrowLeft } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import GroupDetailsModal from "./GroupDetailsModal";
@@ -42,7 +42,8 @@ const ChatHeader = () => {
             </button>
             {/* Close button */}
             <button onClick={handleClose}>
-              <X className="size-5" />
+              <ArrowLeft className="size-5 lg:hidden" />
+              <X className="size-5 hidden lg:block" />
             </button>
           </div>
         </div>
@@ -76,7 +77,8 @@ const ChatHeader = () => {
 
         {/* Close button */}
         <button onClick={handleClose}>
-          <X />
+          <ArrowLeft className="size-5 lg:hidden" />
+          <X className="size-5 hidden lg:block" />
         </button>
       </div>
     </div>

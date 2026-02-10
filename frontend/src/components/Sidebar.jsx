@@ -104,13 +104,82 @@ const Sidebar = () => {
         {/* Search Results */}
         {searchQuery && (
           <div className="mb-4">
-            {/* ... Search results logic (keep simplified) ... */}
             <div className="px-5 text-xs text-zinc-500 font-semibold mb-2 uppercase">Search Results</div>
-            {/* ... (Search implementations) ... */}
+            {isSearching ? (
+              <div className="text-center text-zinc-500 py-4">Searching...</div>
+            ) : searchResults.length === 0 ? (
+              <div className="text-center text-zinc-500 py-4">No users found</div>
+            ) : (
+              searchResults.map((user) => (
+                <div key={user._id} className="w-full p-3 flex items-center justify-between hover:bg-base-200 transition-colors">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <img
+                      src={user.profilePic || "/avatar.png"}
+                      alt={user.fullName}
+                      className="size-10 object-cover rounded-full"
+                    />
+                    <div className="text-left min-w-0">
+                      <div className="font-medium truncate">{user.fullName}</div>
+                    </div>
+                  </div>
+
+                  {user.requestStatus === 'friend' ? (
+                    <span className="text-xs text-green-500">Friend</span>
+                  ) : user.requestStatus === 'sent' ? (
+                    <span className="text-xs text-zinc-500">Sent</span>
+                  ) : user.requestStatus === 'received' ? (
+                    <span className="text-xs text-blue-500">Received</span>
+                  ) : (
+                    <button
+                      onClick={() => sendFriendRequest(user._id)}
+                      className="btn btn-ghost btn-xs btn-circle text-primary"
+                      title="Add Friend"
+                    >
+                      <UserPlus className="size-5" />
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         )}
 
-        {/* ... (Friend Requests logic) ... */}
+        {/* Friend Requests */}
+        {!searchQuery && friendRequests.length > 0 && (
+          <div className="mb-4 border-b border-base-200 pb-2">
+            <div className={`px-5 text-xs text-zinc-500 font-semibold mb-2 uppercase ${isSidebarOpen ? "block" : "hidden lg:block"}`}>Friend Requests</div>
+            {friendRequests.map((req) => (
+              <div key={req._id} className="w-full p-3 flex items-center justify-between hover:bg-base-200 transition-colors">
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <img
+                    src={req.sender.profilePic || "/avatar.png"}
+                    alt={req.sender.fullName}
+                    className="size-10 object-cover rounded-full"
+                  />
+                  <div className={`text-left min-w-0 ${isSidebarOpen ? "block" : "hidden lg:block"}`}>
+                    <div className="font-medium truncate">{req.sender.fullName}</div>
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => acceptFriendRequest(req._id)}
+                    className="btn btn-ghost btn-xs btn-circle text-green-500"
+                    title="Accept"
+                  >
+                    <Check className="size-4" />
+                  </button>
+                  <button
+                    onClick={() => rejectFriendRequest(req._id)}
+                    className="btn btn-ghost btn-xs btn-circle text-red-500"
+                    title="Reject"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Contacts (Friends) List - WhatsApp Style */}
         {!searchQuery && (

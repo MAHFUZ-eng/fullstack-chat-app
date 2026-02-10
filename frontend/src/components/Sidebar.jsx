@@ -38,7 +38,7 @@ const Sidebar = () => {
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSearchBarOpen, setIsSearchBarOpen] = useState(false);
 

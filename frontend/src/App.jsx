@@ -41,8 +41,39 @@ const App = () => {
       getFriendRequests();
       subscribeToFriendUpdates();
 
+      // Handle Android hardware back button
+      const handleBackButton = async () => {
+        // If a chat is open (user or group selected), close it
+        if (useChatStore.getState().selectedUser || useChatStore.getState().selectedGroup) {
+          useChatStore.getState().setSelectedUser(null);
+          useChatStore.getState().setSelectedGroup(null);
+        } else {
+          // If on main screen, exit app
+          try {
+            const { App } = await import('@capacitor/app');
+            App.exitApp();
+          } catch (e) {
+            console.log("Not running in Capacitor context");
+          }
+        }
+      };
+
+      const setupListener = async () => {
+        try {
+          const { App } = await import('@capacitor/app');
+          App.addListener('backButton', handleBackButton);
+        } catch (e) {
+          console.log("Capacitor App plugin not available");
+        }
+      };
+
+      setupListener();
+
       return () => {
         unsubscribeFromFriendUpdates();
+        import('@capacitor/app').then(({ App }) => {
+          App.removeAllListeners('backButton');
+        }).catch(() => { });
       };
     }
   }, [authUser, getFriendRequests, subscribeToFriendUpdates, unsubscribeFromFriendUpdates]);

@@ -21,6 +21,12 @@ const UpdatePrompt = () => {
             const serverVersion = res.data;
 
             const currentVersion = packageJson.version;
+            const dismissedVersion = localStorage.getItem("dismissed_version");
+
+            // If user dismissed this version and it's not a force update, don't show
+            if (serverVersion.version === dismissedVersion && !serverVersion.forceUpdate) {
+                return;
+            }
 
             if (compareVersions(serverVersion.version, currentVersion) > 0) {
                 setVersionInfo(serverVersion);
@@ -54,6 +60,8 @@ const UpdatePrompt = () => {
 
     const handleClose = () => {
         if (!versionInfo?.forceUpdate) {
+            // Save dismissal to local storage
+            localStorage.setItem("dismissed_version", versionInfo.version);
             setIsOpen(false);
         }
     };

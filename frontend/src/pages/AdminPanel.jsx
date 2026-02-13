@@ -157,138 +157,156 @@ const AdminPanel = () => {
                                     toast.success("New version published successfully!");
                                     e.target.reset();
                                 })
+                        })
                                 .catch((err) => {
-                                    toast.error(err.response?.data?.message || "Failed to publish version");
+                            toast.error(err.response?.data?.message || "Failed to publish version");
                                 })
                                 .finally(() => setIsLoading(false));
                         }}>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="form-control">
-                                    <label className="label">
-                                        <span className="label-text">Version (e.g., 1.0.2)</span>
-                                    </label>
-                                    <input name="version" type="text" placeholder="1.0.2" className="input input-bordered" required />
-                                </div>
-                                <div className="form-control">
-                                    <label className="label">
-                                        <span className="label-text">Download URL (APK Link)</span>
-                                    </label>
-                                    <input name="downloadUrl" type="url" placeholder="https://..." className="input input-bordered" required />
-                                </div>
-                            </div>
-                            <div className="form-control mt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="form-control">
                                 <label className="label">
-                                    <span className="label-text">Release Notes</span>
+                                    <span className="label-text">Version (e.g., 1.0.2)</span>
                                 </label>
-                                <textarea name="releaseNotes" className="textarea textarea-bordered h-24" placeholder="What's new in this update?"></textarea>
+                                <input name="version" type="text" placeholder="1.0.2" className="input input-bordered" required />
                             </div>
-                            <div className="form-control mt-4">
-                                <label className="label cursor-pointer justify-start gap-4">
-                                    <span className="label-text">Force Update? (Important Security Fixes)</span>
-                                    <input name="forceUpdate" type="checkbox" className="checkbox checkbox-primary" />
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Download URL (APK Link)</span>
                                 </label>
+                                <input name="downloadUrl" type="url" placeholder="https://..." className="input input-bordered" required />
                             </div>
-                            <button type="submit" className="btn btn-primary mt-4 w-full md:w-auto" disabled={isLoading}>
+                        </div>
+                        <div className="form-control mt-4">
+                            <label className="label">
+                                <span className="label-text">Release Notes</span>
+                            </label>
+                            <textarea name="releaseNotes" className="textarea textarea-bordered h-24" placeholder="What's new in this update?"></textarea>
+                        </div>
+                        <div className="form-control mt-4">
+                            <label className="label cursor-pointer justify-start gap-4">
+                                <span className="label-text">Force Update? (Important Security Fixes)</span>
+                                <input name="forceUpdate" type="checkbox" className="checkbox checkbox-primary" />
+                            </label>
+                        </div>
+                        <div className="flex gap-4 mt-4">
+                            <button type="submit" className="btn btn-primary flex-1" disabled={isLoading}>
                                 Publish Update
                             </button>
+                            <button
+                                type="button"
+                                className="btn btn-error btn-outline"
+                                onClick={() => {
+                                    if (!window.confirm("Are you sure? This will stop the update notification for everyone.")) return;
+                                    setIsLoading(true);
+                                    axiosInstance.delete(`/admin/version?token=${token}`)
+                                        .then(() => toast.success("Update notification stopped"))
+                                        .catch(() => toast.error("Failed to stop update"))
+                                        .finally(() => setIsLoading(false));
+                                }}
+                                disabled={isLoading}
+                            >
+                                Stop Notification
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div className="card bg-base-100 shadow-xl">
+                <div className="card-body">
+                    <h2 className="card-title">User List</h2>
+                    <div className="overflow-x-auto">
+                        <table className="table table-zebra">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Registered</th>
+                                    <th>Security Question</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {users.map((user) => (
+                                    <tr key={user._id}>
+                                        <td className="font-medium">{user.fullName}</td>
+                                        <td>{user.email}</td>
+                                        <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                                        <td>
+                                            {user.hasSecurityQuestion ? (
+                                                <span className="badge badge-success gap-1">
+                                                    <CheckCircle className="size-3" /> Set
+                                                </span>
+                                            ) : (
+                                                <span className="badge badge-error gap-1">
+                                                    <XCircle className="size-3" /> Not Set
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td>
+                                            <button
+                                                onClick={() => setSelectedUser(user)}
+                                                className="btn btn-sm btn-primary gap-1"
+                                            >
+                                                <Key className="size-3" />
+                                                Reset Password
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {/* Reset Password Modal */}
+            {selectedUser && (
+                <div className="modal modal-open">
+                    <div className="modal-box">
+                        <h3 className="font-bold text-lg mb-4">Reset Password</h3>
+                        <p className="mb-4">
+                            Resetting password for: <strong>{selectedUser.email}</strong>
+                        </p>
+                        <form onSubmit={handleResetPassword}>
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">New Password</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Enter new password"
+                                    className="input input-bordered"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    autoFocus
+                                />
+                                <label className="label">
+                                    <span className="label-text-alt">Minimum 6 characters</span>
+                                </label>
+                            </div>
+                            <div className="modal-action">
+                                <button
+                                    type="button"
+                                    className="btn"
+                                    onClick={() => {
+                                        setSelectedUser(null);
+                                        setNewPassword("");
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button type="submit" className="btn btn-primary" disabled={isLoading}>
+                                    {isLoading ? "Resetting..." : "Reset Password"}
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
-
-                <div className="card bg-base-100 shadow-xl">
-                    <div className="card-body">
-                        <h2 className="card-title">User List</h2>
-                        <div className="overflow-x-auto">
-                            <table className="table table-zebra">
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Email</th>
-                                        <th>Registered</th>
-                                        <th>Security Question</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {users.map((user) => (
-                                        <tr key={user._id}>
-                                            <td className="font-medium">{user.fullName}</td>
-                                            <td>{user.email}</td>
-                                            <td>{new Date(user.createdAt).toLocaleDateString()}</td>
-                                            <td>
-                                                {user.hasSecurityQuestion ? (
-                                                    <span className="badge badge-success gap-1">
-                                                        <CheckCircle className="size-3" /> Set
-                                                    </span>
-                                                ) : (
-                                                    <span className="badge badge-error gap-1">
-                                                        <XCircle className="size-3" /> Not Set
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td>
-                                                <button
-                                                    onClick={() => setSelectedUser(user)}
-                                                    className="btn btn-sm btn-primary gap-1"
-                                                >
-                                                    <Key className="size-3" />
-                                                    Reset Password
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Reset Password Modal */}
-                {selectedUser && (
-                    <div className="modal modal-open">
-                        <div className="modal-box">
-                            <h3 className="font-bold text-lg mb-4">Reset Password</h3>
-                            <p className="mb-4">
-                                Resetting password for: <strong>{selectedUser.email}</strong>
-                            </p>
-                            <form onSubmit={handleResetPassword}>
-                                <div className="form-control">
-                                    <label className="label">
-                                        <span className="label-text">New Password</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Enter new password"
-                                        className="input input-bordered"
-                                        value={newPassword}
-                                        onChange={(e) => setNewPassword(e.target.value)}
-                                        autoFocus
-                                    />
-                                    <label className="label">
-                                        <span className="label-text-alt">Minimum 6 characters</span>
-                                    </label>
-                                </div>
-                                <div className="modal-action">
-                                    <button
-                                        type="button"
-                                        className="btn"
-                                        onClick={() => {
-                                            setSelectedUser(null);
-                                            setNewPassword("");
-                                        }}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button type="submit" className="btn btn-primary" disabled={isLoading}>
-                                        {isLoading ? "Resetting..." : "Reset Password"}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                )}
-            </div>
+            )}
         </div>
+        </div >
     );
 };
 

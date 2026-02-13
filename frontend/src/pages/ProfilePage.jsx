@@ -72,7 +72,7 @@ const ProfilePage = () => {
                 <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl group-hover:bg-primary/30 transition-all duration-500" />
                 <div className="relative">
                   <img
-                    src={selectedImg || authUser.profilePic || "/avatar.png"}
+                    src={selectedImg || authUser?.profilePic || "/avatar.png"}
                     alt="Profile"
                     className="size-40 rounded-[2.5rem] object-cover border-4 border-base-100 shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]"
                   />

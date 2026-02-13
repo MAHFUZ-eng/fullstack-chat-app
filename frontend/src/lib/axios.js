@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const axiosInstance = axios.create({
-  baseURL: import.meta.env.MODE === "development" ? "http://192.168.0.103:5001/api" : "/api",
+  baseURL: "https://fullstack-chat-app-9dor.onrender.com/api",
   withCredentials: true,
 });
 

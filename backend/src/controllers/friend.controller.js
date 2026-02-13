@@ -2,7 +2,7 @@ import User from "../models/user.model.js";
 import FriendRequest from "../models/friendRequest.model.js";
 
 import Message from "../models/message.model.js";
-import mongoose from "mongoose";
+import { getReceiverSocketId, io } from "../lib/socket.js";
 
 export const searchUsers = async (req, res) => {
     try {
@@ -16,14 +16,14 @@ export const searchUsers = async (req, res) => {
                 { _id: { $ne: currentUserId } },
                 {
                     $or: [
-                        { fullName: { $regex: `^${query}`, $options: "i" } },
-                        { email: { $regex: `^${query}`, $options: "i" } },
+                        { fullName: { $regex: query, $options: "i" } },
+                        { email: { $regex: query, $options: "i" } },
                     ],
                 },
             ],
         }).select("-password");
 
-        // Check friend status for each user
+        // Check friend status and apply email privacy for each user
         const usersWithStatus = await Promise.all(
             users.map(async (user) => {
                 const friendRequest = await FriendRequest.findOne({
@@ -34,12 +34,7 @@ export const searchUsers = async (req, res) => {
                     status: "pending",
                 });
 
-                const isFriend = req.user.friends.includes(user._id);
-
-                // Wait, req.user might not have populated friends yet if not populated in middleware
-                // But for check, simple ID check is enough if friends is array of IDs.
-                // Assuming req.user from auth middleware has updated friends list. 
-                // If auth middleware fetches user without populating, friends is just IDs.
+                const isFriend = Array.isArray(req.user.friends) && req.user.friends.some(friendId => friendId.toString() === user._id.toString());
 
                 let status = "none";
                 if (isFriend) {
@@ -48,7 +43,18 @@ export const searchUsers = async (req, res) => {
                     status = friendRequest.sender.toString() === currentUserId.toString() ? "sent" : "received";
                 }
 
-                return { ...user.toObject(), requestStatus: status, requestId: friendRequest?._id };
+                const userObj = user.toObject();
+
+                // Apply Email Privacy Logic
+                if (user.emailVisibility === "only_me") {
+                    delete userObj.email;
+                } else if (user.emailVisibility === "friends_only") {
+                    if (!isFriend) {
+                        delete userObj.email;
+                    }
+                }
+
+                return { ...userObj, requestStatus: status, requestId: friendRequest?._id };
             })
         );
 
@@ -96,6 +102,11 @@ export const sendFriendRequest = async (req, res) => {
 
         await newRequest.save();
 
+        const receiverSocketId = getReceiverSocketId(receiverId);
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("newFriendRequest", newRequest);
+        }
+
         res.status(201).json({ message: "Friend request sent", request: newRequest });
     } catch (error) {
         console.error("Error in sendFriendRequest: ", error.message);
@@ -106,12 +117,40 @@ export const sendFriendRequest = async (req, res) => {
 export const getFriendRequests = async (req, res) => {
     try {
         const userId = req.user._id;
-        const requests = await FriendRequest.find({
+
+        // Get received requests (where user is the receiver)
+        const receivedRequests = await FriendRequest.find({
             receiver: userId,
             status: "pending"
-        }).populate("sender", "fullName email profilePic");
+        }).populate("sender", "fullName email profilePic emailVisibility");
 
-        res.status(200).json(requests);
+        // Get sent requests (where user is the sender)
+        const sentRequests = await FriendRequest.find({
+            sender: userId,
+            status: "pending"
+        }).populate("receiver", "fullName email profilePic emailVisibility");
+
+        const sanitizeRequest = (req, isSender) => {
+            const reqObj = req.toObject();
+            const target = isSender ? reqObj.sender : reqObj.receiver;
+
+            // If I am the sender, I am looking at the receiver. Checking receiver's privacy.
+            // If I am the receiver, I am looking at the sender. Checking sender's privacy.
+
+            // For friend requests, usually we want to know who it is. 
+            // But if "only_me" is strictly "only me", then email should be hidden.
+            // If "friends_only", we are NOT friends yet (pending), so hide it.
+
+            if (target.emailVisibility === "only_me" || target.emailVisibility === "friends_only") {
+                target.email = null;
+            }
+            return reqObj;
+        };
+
+        res.status(200).json({
+            received: receivedRequests.map(r => sanitizeRequest(r, false)),
+            sent: sentRequests.map(r => sanitizeRequest(r, true))
+        });
     } catch (error) {
         console.error("Error in getFriendRequests: ", error.message);
         res.status(500).json({ error: "Internal server error" });
@@ -144,6 +183,14 @@ export const acceptFriendRequest = async (req, res) => {
         await User.findByIdAndUpdate(request.sender, { $addToSet: { friends: request.receiver } });
         await User.findByIdAndUpdate(request.receiver, { $addToSet: { friends: request.sender } });
 
+        const receiverSocketId = getReceiverSocketId(request.sender);
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("friendRequestAccepted", {
+                accepterName: req.user.fullName,
+                accepterId: userId
+            });
+        }
+
         res.status(200).json({ message: "Friend request accepted" });
 
     } catch (error) {
@@ -163,15 +210,19 @@ export const rejectFriendRequest = async (req, res) => {
             return res.status(404).json({ message: "Friend request not found" });
         }
 
-        if (request.receiver.toString() !== userId.toString()) {
-            return res.status(403).json({ message: "You are not authorized to reject this request" });
+        // Allow both receiver (rejecting) and sender (canceling) to delete the request
+        const isReceiver = request.receiver.toString() === userId.toString();
+        const isSender = request.sender.toString() === userId.toString();
+
+        if (!isReceiver && !isSender) {
+            return res.status(403).json({ message: "You are not authorized to delete this request" });
         }
 
         // We can either delete it or mark as rejected. Deleting is cleaner for re-requests later.
         // But plan said "mark as rejected or delete". I'll delete it to allow future requests.
         await FriendRequest.findByIdAndDelete(requestId);
 
-        res.status(200).json({ message: "Friend request rejected" });
+        res.status(200).json({ message: isReceiver ? "Friend request rejected" : "Friend request cancelled" });
 
     } catch (error) {
         console.error("Error in rejectFriendRequest: ", error.message);
@@ -210,8 +261,13 @@ export const getFriends = async (req, res) => {
                     ]
                 }).sort({ createdAt: -1 });
 
+                const friendObj = friend.toObject();
+                if (friend.emailVisibility === "only_me") {
+                    friendObj.email = null;
+                }
+
                 return {
-                    ...friend.toObject(),
+                    ...friendObj,
                     lastMessage: lastMessage ? {
                         text: lastMessage.text,
                         image: lastMessage.image,

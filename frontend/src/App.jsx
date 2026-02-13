@@ -7,14 +7,21 @@ import SignUpPage from "./pages/SignUpPage";
 import LoginPage from "./pages/LoginPage";
 import SettingsPage from "./pages/SettingsPage";
 import ProfilePage from "./pages/ProfilePage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthStore";
+import { useChatStore } from "./store/useChatStore";
 import { useThemeStore } from "./store/useThemeStore";
 import { useEffect } from "react";
 
 import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
+
+import BottomNav from "./components/BottomNav"; // Import BottomNav
+import FriendsPage from "./pages/FriendsPage"; // Import FriendsPage
 
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth, onlineUsers } = useAuthStore();
@@ -26,6 +33,19 @@ const App = () => {
     checkAuth();
   }, [checkAuth]);
 
+  const { getFriendRequests, subscribeToFriendUpdates, unsubscribeFromFriendUpdates } = useChatStore();
+
+  useEffect(() => {
+    if (authUser) {
+      getFriendRequests();
+      subscribeToFriendUpdates();
+
+      return () => {
+        unsubscribeFromFriendUpdates();
+      };
+    }
+  }, [authUser, getFriendRequests, subscribeToFriendUpdates, unsubscribeFromFriendUpdates]);
+
   console.log({ authUser });
 
   if (isCheckingAuth && !authUser)
@@ -36,18 +56,40 @@ const App = () => {
     );
 
   return (
-    <div data-theme={theme}>
+    <div data-theme={theme} className="min-h-screen bg-base-100 transition-colors duration-300">
       <Navbar />
 
       <Routes>
         <Route path="/" element={authUser ? <HomePage /> : <Navigate to="/login" />} />
         <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to="/" />} />
         <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/" />} />
+        <Route path="/verify-email" element={!authUser ? <VerifyEmailPage /> : <Navigate to="/" />} />
+        <Route path="/forgot-password" element={!authUser ? <ForgotPasswordPage /> : <Navigate to="/" />} />
+        <Route path="/reset-password" element={!authUser ? <ResetPasswordPage /> : <Navigate to="/" />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/profile" element={authUser ? <ProfilePage /> : <Navigate to="/login" />} />
+        <Route path="/friends" element={authUser ? <FriendsPage /> : <Navigate to="/login" />} />
       </Routes>
 
-      <Toaster />
+      {authUser && <BottomNav />}
+
+      <Toaster
+        position="top-center"
+        reverseOrder={false}
+        gutter={8}
+        toastOptions={{
+          duration: 3000,
+          style: {
+            borderRadius: '12px',
+            background: '#333',
+            color: '#fff',
+          },
+        }}
+        containerStyle={{
+          top: 20,
+        }}
+        limit={3} // Limit total toasts on screen
+      />
     </div>
   );
 };

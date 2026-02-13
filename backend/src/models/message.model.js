@@ -24,10 +24,30 @@ const messageSchema = new mongoose.Schema(
     audioUrl: {
       type: String,
     },
+    status: {
+      type: String,
+      enum: ["sent", "delivered", "seen"],
+      default: "sent",
+    },
+    reactions: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        emoji: String,
+      },
+    ],
+    deletedFor: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
   },
   { timestamps: true }
 );
 
-const Message = mongoose.models.Message || mongoose.model("Message", messageSchema);
+const Message = mongoose.model("Message", messageSchema);
 
 export default Message;

@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
+import { Link } from "react-router-dom";
+import { Users, Plus, Search, UserPlus, Check, X, ArrowLeft, Camera, MoreVertical, RefreshCcw, MessageSquare, Sparkles, User, LogOut } from "lucide-react";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
-import { Users, Plus, Search, UserPlus, Check, X, ArrowLeft } from "lucide-react";
 import CreateGroupModal from "./CreateGroupModal.jsx";
+import { motion, AnimatePresence } from "framer-motion";
 
 const Sidebar = () => {
-  // ... (store destructuring)
   const {
     getFriends,
     users,
@@ -26,21 +27,14 @@ const Sidebar = () => {
     acceptFriendRequest,
     rejectFriendRequest,
     isSearching,
-    // unreadCounts removed as it was duplicate, but I need it back if I deleted both? 
-    // Step 266 removed the second one. Step 252 added it. Original had one?
-    // Let's check store destructuring lines 9-29.
+    setSidebarSearchActive,
   } = useChatStore();
 
-  // Calculate unread counts map (Added back if missing or just rely on store)
   const unreadCounts = useChatStore(state => state.unreadCounts) || {};
-
-  const { onlineUsers } = useAuthStore();
-  const [showOnlineOnly, setShowOnlineOnly] = useState(false);
+  const { onlineUsers, logout } = useAuthStore();
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isSearchBarOpen, setIsSearchBarOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState("all");
 
   useEffect(() => {
     getFriends();
@@ -48,22 +42,30 @@ const Sidebar = () => {
     getFriendRequests();
   }, [getFriends, getGroups, getFriendRequests]);
 
+  useEffect(() => {
+    setSidebarSearchActive(!!searchQuery);
+    return () => setSidebarSearchActive(false);
+  }, [searchQuery, setSidebarSearchActive]);
+
   const handleSearch = (e) => {
-    setSearchQuery(e.target.value);
-    if (e.target.value.trim()) {
-      searchUsers(e.target.value);
-    }
+    const value = e.target.value;
+    setSearchQuery(value);
+    searchUsers(value);
   };
 
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const truncateText = (text, length = 30) => {
+    if (!text) return "";
+    return text.length > length ? text.substring(0, length) + "..." : text;
+  };
 
-  const filteredUsers = showOnlineOnly
-    ? users.filter((user) => onlineUsers.includes(user._id))
-    : users;
+  const usersList = Array.isArray(users) ? users : [];
+  const filteredUsers = usersList.filter((user) => {
+    const name = user.fullName || "";
+    const searchMatch = name.toLowerCase().includes(searchQuery.toLowerCase());
+    if (activeFilter === "unread") return searchMatch && unreadCounts[user._id] > 0;
+    return searchMatch;
+  });
 
-
-
-  // Format time helper
   const formatTime = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -72,230 +74,285 @@ const Sidebar = () => {
 
   if (isFriendsLoading || isGroupsLoading) return <SidebarSkeleton />;
 
-  return (
-    <aside
-      className={`
-        h-full border-r border-base-300 flex flex-col transition-all duration-200
-        w-full ${isSidebarOpen ? "lg:w-72" : "lg:w-20"}
-        bg-base-100
-      `}
-    >
-      <div className={`
-          bg-base-100 pb-2
-          ${!isSidebarOpen && "lg:hidden"}
-      `}>
-        {/* Header or Search Input */}
-        {isSidebarOpen && searchQuery !== "" || isSidebarOpen && document.activeElement?.tagName === "INPUT" ? (
-          // Logic simplified: If searching, show input. But simpler is just a toggle state.
-          // Let's use a local state for UI toggle if needed, or just always show input if it has value?
-          // WhatsApp hides title and shows input.
-          null
-        ) : null}
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.05 }
+    }
+  };
 
-        {!isSearchBarOpen ? (
-          <div className="flex items-center justify-between px-4 py-3">
-            <span className="text-xl font-bold">Chatty</span>
-            <div className="flex items-center gap-4">
-              <button onClick={() => setIsSearchBarOpen(true)} className="btn btn-ghost btn-circle btn-sm">
-                <Search className="size-5" />
-              </button>
-              {/* Desktop Toggle (Expand/Collapse Sidebar) */}
-              <button onClick={toggleSidebar} className="hidden lg:flex btn btn-ghost btn-circle btn-sm">
-                {isSidebarOpen ? <X className="size-5" /> : <Search className="size-5" />}
-              </button>
+  const itemVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: { opacity: 1, x: 0 }
+  };
+
+  return (
+    <aside className={`h-full flex flex-col transition-all duration-300 w-full lg:w-full bg-base-100 ${(selectedUser || selectedGroup) ? "hidden lg:flex" : "flex"}`}>
+      {/* Header Branding */}
+      <div className="px-6 pt-safe pb-4 bg-base-100 border-b border-base-200 lg:border-none">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-xl bg-primary flex items-center justify-center text-primary-content">
+              <MessageSquare className="size-5" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold tracking-tight flex items-center gap-1.5">
+                Nexo <Sparkles className="size-3.5 text-primary" />
+              </h1>
+              <p className="text-[9px] text-base-content/40 font-bold uppercase tracking-[0.15em] leading-none">Messages</p>
             </div>
           </div>
-        ) : (
-          <div className="flex items-center gap-2 px-2 py-3">
-            <button onClick={() => { setIsSearchBarOpen(false); setSearchQuery(""); }} className="btn btn-ghost btn-circle btn-sm">
-              <ArrowLeft className="size-5" />
+          <div className="flex items-center gap-1">
+            <Link to="/profile" className="btn btn-ghost btn-circle btn-sm text-base-content/60 hover:text-primary transition-colors">
+              <User className="size-4.5" />
+            </Link>
+            <button className="btn btn-ghost btn-circle btn-sm text-base-content/60 hover:text-error transition-colors" onClick={logout}>
+              <LogOut className="size-4.5" />
             </button>
-            <input
-              type="text"
-              placeholder="Search..."
-              className="input input-sm input-bordered w-full rounded-full"
-              value={searchQuery}
-              onChange={handleSearch}
-              autoFocus
-            />
           </div>
-        )}
+        </div>
 
-        {/* Filters (Hide when searching) */}
-        {!isSearchBarOpen && (
-          <div className="flex gap-2 px-4 pb-2 overflow-x-auto no-scrollbar">
-            <button className="btn btn-xs rounded-full btn-active normal-case">All</button>
-            <button className="btn btn-xs rounded-full btn-ghost bg-base-200 normal-case">Unread</button>
-            <button className="btn btn-xs rounded-full btn-ghost bg-base-200 normal-case">Groups</button>
+        {/* Search Bar */}
+        <div className="relative group mb-3">
+          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-base-content/20 group-focus-within:text-primary transition-colors">
+            <Search className="size-4.5" />
           </div>
-        )}
+          <input
+            type="text"
+            placeholder="Search people..."
+            className="input w-full bg-base-200 border-none focus:bg-base-200/50 h-10 rounded-xl pl-11 pr-10 transition-all text-sm font-medium"
+            value={searchQuery}
+            onChange={handleSearch}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                searchUsers("");
+              }}
+              className="absolute inset-y-0 right-3 flex items-center text-base-content/30 hover:text-error transition-colors"
+            >
+              <X className="size-4.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Filter Pills */}
+        <div className="flex gap-2 py-1">
+          {["all", "unread", "groups"].map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setActiveFilter(filter)}
+              className={`
+                px-4 py-1.5 rounded-lg text-[11px] font-bold capitalize transition-all
+                ${activeFilter === filter
+                  ? "bg-primary text-primary-content"
+                  : "bg-base-200 text-base-content/60 hover:bg-base-300"}
+              `}
+            >
+              {filter}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Divider */}
-      <div className="h-[1px] bg-base-200 w-full mb-1"></div>
-
-      <div className="overflow-y-auto w-full flex-1">
-        {/* Search Results */}
-        {searchQuery && (
-          <div className="mb-4">
-            <div className="px-5 text-xs text-zinc-500 font-semibold mb-2 uppercase">Search Results</div>
-            {isSearching ? (
-              <div className="text-center text-zinc-500 py-4">Searching...</div>
-            ) : searchResults.length === 0 ? (
-              <div className="text-center text-zinc-500 py-4">No users found</div>
-            ) : (
-              searchResults.map((user) => (
-                <div key={user._id} className="w-full p-3 flex items-center justify-between hover:bg-base-200 transition-colors">
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <img
-                      src={user.profilePic || "/avatar.png"}
-                      alt={user.fullName}
-                      className="size-10 object-cover rounded-full"
-                    />
-                    <div className="text-left min-w-0">
-                      <div className="font-medium truncate">{user.fullName}</div>
-                    </div>
-                  </div>
-
-                  {user.requestStatus === 'friend' ? (
-                    <span className="text-xs text-green-500">Friend</span>
-                  ) : user.requestStatus === 'sent' ? (
-                    <span className="text-xs text-zinc-500">Sent</span>
-                  ) : user.requestStatus === 'received' ? (
-                    <span className="text-xs text-blue-500">Received</span>
-                  ) : (
-                    <button
-                      onClick={() => sendFriendRequest(user._id)}
-                      className="btn btn-ghost btn-xs btn-circle text-primary"
-                      title="Add Friend"
-                    >
-                      <UserPlus className="size-5" />
-                    </button>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        )}
-
-        {/* Friend Requests */}
-        {!searchQuery && friendRequests.length > 0 && (
-          <div className="mb-4 border-b border-base-200 pb-2">
-            <div className={`px-5 text-xs text-zinc-500 font-semibold mb-2 uppercase block ${!isSidebarOpen && "lg:hidden"}`}>Friend Requests</div>
-            {friendRequests.map((req) => (
-              <div key={req._id} className="w-full p-3 flex items-center justify-between hover:bg-base-200 transition-colors">
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <img
-                    src={req.sender.profilePic || "/avatar.png"}
-                    alt={req.sender.fullName}
-                    className="size-10 object-cover rounded-full"
-                  />
-                  <div className={`text-left min-w-0 block ${!isSidebarOpen && "lg:hidden"}`}>
-                    <div className="font-medium truncate">{req.sender.fullName}</div>
-                  </div>
-                </div>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => acceptFriendRequest(req._id)}
-                    className="btn btn-ghost btn-xs btn-circle text-green-500"
-                    title="Accept"
-                  >
-                    <Check className="size-4" />
-                  </button>
-                  <button
-                    onClick={() => rejectFriendRequest(req._id)}
-                    className="btn btn-ghost btn-xs btn-circle text-red-500"
-                    title="Reject"
-                  >
-                    <X className="size-4" />
-                  </button>
-                </div>
+      {/* Chat List */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="px-4 pb-20 lg:pb-8 space-y-1"
+        >
+          {filteredUsers.length === 0 && searchQuery && searchResults.length === 0 && !isSearching && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-col items-center justify-center py-20 text-center px-10"
+            >
+              <div className="size-16 rounded-3xl bg-base-200/50 flex items-center justify-center text-base-content/20 mb-4 animate-pulse">
+                <Users size={32} />
               </div>
-            ))}
-          </div>
-        )}
+              <h3 className="text-lg font-bold opacity-40">No people found</h3>
+              <p className="text-xs opacity-30 mt-1 max-w-[200px]">Try searching for a different name or email.</p>
+            </motion.div>
+          )}
 
-        {/* Contacts (Friends) List - WhatsApp Style */}
-        {!searchQuery && (
-          <div className="flex flex-col">
-            {filteredUsers.map((user) => {
-              const lastMsg = user.lastMessage;
-              const isUnread = unreadCounts[user._id] > 0;
+          {isSearching && (
+            <div className="flex items-center justify-center py-10">
+              <span className="loading loading-ring loading-md text-primary opacity-50"></span>
+            </div>
+          )}
 
-              return (
-                <button
-                  key={user._id}
-                  onClick={() => setSelectedUser(user)}
-                  className={`
-                        w-full p-3 flex items-center gap-3
-                        hover:bg-base-200 transition-colors
-                        relative
-                        ${selectedUser?._id === user._id ? "bg-base-200" : ""}
+          <div className="space-y-1">
+            {/* Friends / Direct Messages */}
+            {(activeFilter === "all" || activeFilter === "unread" || (activeFilter === "all" && !searchQuery)) &&
+              filteredUsers.map((user) => {
+                const userIdStr = user._id?.toString();
+                const isSelected = selectedUser?._id?.toString() === userIdStr;
+                const isUnread = unreadCounts[userIdStr] > 0;
+
+                return (
+                  <motion.button
+                    key={userIdStr}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    layout
+                    onClick={() => setSelectedUser(user)}
+                    className={`
+                      w-full p-4 flex items-center gap-4 rounded-2xl transition-all duration-300
+                      ${isSelected ? "bg-primary text-primary-content shadow-xl shadow-primary/20 translate-x-1" : "hover:bg-base-200/50 active:scale-[0.98]"}
                     `}
-                >
-                  <div className="relative">
-                    <img
-                      src={user.profilePic || "/avatar.png"}
-                      alt={user.name}
-                      className="size-12 object-cover rounded-full"
-                    />
-                    {onlineUsers.includes(user._id) && (
-                      <span
-                        className="absolute bottom-0 right-0 size-3 bg-green-500 
-                            rounded-full ring-2 ring-white dark:ring-zinc-900"
-                      />
-                    )}
-                  </div>
-
-                  <div className={`flex-1 min-w-0 flex flex-col justify-center ${!isSidebarOpen && "lg:hidden"}`}>
-                    <div className="flex justify-between items-baseline">
-                      <h3 className="font-semibold text-base truncate">{user.fullName}</h3>
-                      <span className={`text-xs ${isUnread ? "text-green-500 font-medium" : "text-zinc-500"}`}>
-                        {lastMsg ? formatTime(lastMsg.createdAt) : ""}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between items-center mt-0.5">
-                      <p className="text-sm text-zinc-500 truncate pr-2 flex items-center gap-1">
-                        {lastMsg?.senderId !== user._id && lastMsg && (
-                          <Check className="size-3 text-blue-500 inline" />
-                          // Dummy 'read' check for now, standard logic later
-                        )}
-                        {lastMsg ? (
-                          lastMsg.text || (lastMsg.image ? "📷 Photo" : "🎤 Audio")
-                        ) : (
-                          <span className="italic text-xs">No messages yet</span>
-                        )}
-                      </p>
-
-                      {isUnread && (
-                        <span className="bg-green-500 text-white text-[10px] font-bold h-5 min-w-5 rounded-full flex items-center justify-center px-1">
-                          {unreadCounts[user._id]}
-                        </span>
+                  >
+                    <div className="relative shrink-0">
+                      <div className={`p-0.5 rounded-full ${isUnread ? "ring-2 ring-primary ring-offset-2 ring-offset-base-100" : ""}`}>
+                        <img
+                          src={user.profilePic || "/avatar.png"}
+                          alt={user.fullName || "User"}
+                          className="size-14 object-cover rounded-2xl shadow-md border border-base-300/10"
+                        />
+                      </div>
+                      {onlineUsers.includes(userIdStr) && (
+                        <div className="absolute -bottom-0.5 -right-0.5 size-4 bg-success rounded-full ring-4 ring-base-100" />
                       )}
                     </div>
-                  </div>
-                </button>
-              );
-            })}
+
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="flex justify-between items-baseline mb-0.5">
+                        <h3 className={`font-bold text-[15px] truncate ${isSelected ? "text-primary-content" : "text-base-content"}`}>
+                          {user.fullName || "Unknown User"}
+                        </h3>
+                        <span className={`text-[10px] font-bold ${isSelected ? "opacity-70" : (isUnread ? "text-primary" : "opacity-40")}`}>
+                          {user.lastMessageTime ? formatTime(user.lastMessageTime) : (user.lastMessage?.createdAt ? formatTime(user.lastMessage.createdAt) : "")}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 mt-1">
+                        <p className={`text-xs truncate font-medium flex-1 ${isSelected ? "text-primary-content/80" : (isUnread ? "text-base-content font-bold" : "text-base-content/40")}`}>
+                          {typeof user.lastMessage === 'string'
+                            ? user.lastMessage
+                            : (user.lastMessage?.text || (user.lastMessage?.image ? "📷 Photo" : (user.lastMessage?.audioUrl ? "🎤 Audio" : "Start chatting!")))
+                          }
+                        </p>
+                        {isUnread && (
+                          <div className={`shrink-0 min-w-[22px] h-[22px] px-1.5 rounded-full flex items-center justify-center text-[10px] font-black ${isSelected ? "bg-white text-primary" : "bg-error text-white"} shadow-lg ring-2 ring-base-100 shadow-error/20`}>
+                            {unreadCounts[userIdStr]}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </motion.button>
+                );
+              })
+            }
+
+            {/* Groups Section */}
+            {(activeFilter === "all" || activeFilter === "groups") && (
+              <div className="space-y-1">
+                {activeFilter === "all" && groups.length > 0 && <div className="px-6 py-2 text-[10px] font-black text-base-content/20 uppercase tracking-[0.2em] mt-2">Groups</div>}
+                {groups
+                  .filter(group => {
+                    const name = group.name || "";
+                    return name.toLowerCase().includes(searchQuery.toLowerCase());
+                  })
+                  .map((group) => {
+                    const groupIdStr = group._id?.toString();
+                    const isSelected = selectedGroup?._id?.toString() === groupIdStr;
+                    const isUnread = unreadCounts[groupIdStr] > 0;
+                    return (
+                      <motion.button
+                        key={groupIdStr}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        layout
+                        onClick={() => setSelectedGroup(group)}
+                        className={`
+                            w-full p-4 flex items-center gap-4 rounded-2xl transition-all duration-300
+                            ${isSelected ? "bg-primary text-primary-content shadow-xl shadow-primary/20 translate-x-1" : "hover:bg-base-200/50 active:scale-[0.98]"}
+                          `}
+                      >
+                        <div className="relative shrink-0">
+                          <div className={`size-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform ${isUnread ? "ring-2 ring-primary ring-offset-2 ring-offset-base-100" : ""}`}>
+                            <Users size={28} />
+                          </div>
+                        </div>
+                        <div className="flex-1 text-left min-w-0">
+                          <div className="flex justify-between items-baseline mb-0.5">
+                            <h3 className={`font-bold text-[15px] truncate ${isSelected ? "text-primary-content" : "text-base-content"}`}>
+                              {group.name}
+                            </h3>
+                          </div>
+                          <div className="flex items-center justify-between gap-2 mt-1">
+                            <p className={`text-xs truncate font-medium flex-1 ${isSelected ? "text-primary-content/80" : (isUnread ? "text-base-content font-bold" : "text-base-content/40")}`}>
+                              {group.members?.length || 0} members
+                            </p>
+                            {isUnread && (
+                              <div className={`shrink-0 min-w-[22px] h-[22px] px-1.5 rounded-full flex items-center justify-center text-[10px] font-black ${isSelected ? "bg-white text-primary" : "bg-error text-white"} shadow-lg ring-2 ring-base-100 shadow-error/20`}>
+                                {unreadCounts[groupIdStr]}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+              </div>
+            )}
+
+            {/* Global Search Results */}
+            {searchQuery && searchResults.length > 0 && (
+              <div className="pt-6 space-y-1">
+                <div className="px-6 py-2 text-[10px] font-black text-primary uppercase tracking-[0.2em]">Global Discovery</div>
+                {searchResults
+                  .filter(res => {
+                    const resId = res._id ? res._id.toString() : "";
+                    const isAlreadyInList = usersList.some(u => u._id && u._id.toString() === resId);
+                    return !isAlreadyInList;
+                  })
+                  .map(user => (
+                    <motion.button
+                      key={user._id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      layout
+                      onClick={() => setSelectedUser(user)}
+                      className="w-full p-4 flex items-center gap-4 rounded-2xl hover:bg-base-200/50 transition-all active:scale-[0.98]"
+                    >
+                      <img src={user.profilePic || "/avatar.png"} alt={user.fullName || "User"} className="size-14 object-cover rounded-2xl border border-base-300/10 shadow-sm" />
+                      <div className="flex-1 text-left min-w-0">
+                        <h3 className="font-bold text-[15px] text-base-content">{user.fullName || "Global User"}</h3>
+                        <p className="text-xs text-base-content/40 truncate font-medium">{user.email}</p>
+                      </div>
+                      <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                        <Plus className="size-5" />
+                      </div>
+                    </motion.button>
+                  ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </motion.div>
+      </div >
 
-      {/* Floating Action Button (Mobile Only) */}
-      <div className={`absolute bottom-6 right-6 lg:hidden ${searchQuery ? "hidden" : "block"}`}>
-        <button
-          onClick={() => setShowCreateGroupModal(true)} // Or open search for new chat
-          className="btn btn-circle btn-primary size-14 shadow-lg text-white"
+      {/* Modern FAB */}
+      < div className="fixed bottom-24 right-6 lg:hidden z-[60]" >
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setShowCreateGroupModal(true)}
+          className="btn btn-circle btn-primary size-14 shadow-xl text-primary-content border-none"
         >
-          <Plus className="size-6" />
-        </button>
-      </div>
+          <Plus className="size-7" />
+        </motion.button>
+      </div >
 
-      {showCreateGroupModal && (
-        <CreateGroupModal onClose={() => setShowCreateGroupModal(false)} />
-      )}
-    </aside>
+      <AnimatePresence>
+        {showCreateGroupModal && (
+          <CreateGroupModal onClose={() => setShowCreateGroupModal(false)} />
+        )}
+      </AnimatePresence>
+    </aside >
   );
 };
+
 export default Sidebar;

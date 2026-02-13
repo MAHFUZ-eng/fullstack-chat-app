@@ -7,6 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import { connectDB } from "./lib/db.js";
+import { startCleanupJobs } from "./lib/cleanup.js";
 
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
@@ -25,7 +26,7 @@ app.use(express.urlencoded({ extended: true, limit: "4mb" }));
 app.use(cookieParser());
 app.use(
   cors({
-    origin: ["http://localhost:5176", "http://localhost:5173"],
+    origin: true, // Allow all origins (for mobile dev)
     credentials: true,
   })
 );
@@ -46,4 +47,5 @@ if (process.env.NODE_ENV === "production") {
 server.listen(PORT, () => {
   console.log("server is running on PORT:" + PORT);
   connectDB();
+  startCleanupJobs();
 });

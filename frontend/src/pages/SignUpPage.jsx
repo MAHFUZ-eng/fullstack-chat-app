@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquare, User } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import AuthImagePattern from "../components/AuthImagePattern";
 import toast from "react-hot-toast";
@@ -15,6 +15,7 @@ const SignUpPage = () => {
   });
 
   const { signup, isSigningUp } = useAuthStore();
+  const navigate = useNavigate();
 
   const validateForm = () => {
     if (!formData.fullName.trim()) return toast.error("Full name is required");
@@ -31,7 +32,7 @@ const SignUpPage = () => {
 
     const success = validateForm();
 
-    if (success === true) signup(formData);
+    if (success === true) signup(formData, navigate);
   };
 
   return (
@@ -86,6 +87,8 @@ const SignUpPage = () => {
                   placeholder="you@example.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  autoCapitalize="none"
+                  autoCorrect="off"
                 />
               </div>
             </div>
@@ -104,6 +107,8 @@ const SignUpPage = () => {
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  autoCapitalize="none"
+                  autoCorrect="off"
                 />
                 <button
                   type="button"

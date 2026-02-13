@@ -41,7 +41,26 @@ export const getGroups = async (req, res) => {
     try {
         const userId = req.user._id;
         const groups = await Group.find({ members: userId }).populate("members", "-password").sort({ updatedAt: -1 });
-        res.status(200).json(groups);
+
+        const groupsWithPrivacy = groups.map(group => {
+            const groupObj = group.toObject();
+            groupObj.members = groupObj.members.map(member => {
+                // If member is self, return as is
+                if (member._id.toString() === userId.toString()) return member;
+
+                const isFriend = req.user.friends.some(friendId => friendId.toString() === member._id.toString());
+
+                if (member.emailVisibility === "only_me") {
+                    member.email = null;
+                } else if (member.emailVisibility === "friends_only" && !isFriend) {
+                    member.email = null;
+                }
+                return member;
+            });
+            return groupObj;
+        });
+
+        res.status(200).json(groupsWithPrivacy);
     } catch (error) {
         console.error("Error in getGroups:", error.message);
         res.status(500).json({ message: "Internal Server Error" });

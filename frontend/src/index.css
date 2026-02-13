@@ -1,6 +1,23 @@
 @import "tailwindcss";
+
 @plugin "daisyui" {
   themes: light, dark, cupcake, bumblebee, emerald, corporate, synthwave, retro, cyberpunk, valentine, halloween, garden, forest, aqua, lofi, pastel, fantasy, wireframe, black, luxury, dracula, cmyk, autumn, business, acid, lemonade, night, coffee, winter, dim, nord, sunset;
 }
 
+@layer utilities {
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
 
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .pb-safe-offset {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
+  }
+
+  .h-navbar-mobile {
+    height: calc(env(safe-area-inset-top) + 4rem);
+  }
+}

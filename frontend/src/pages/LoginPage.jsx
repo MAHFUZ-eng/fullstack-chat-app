@@ -56,6 +56,8 @@ const LoginPage = () => {
                   placeholder="you@example.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  autoCapitalize="none"
+                  autoCorrect="off"
                 />
               </div>
             </div>
@@ -74,6 +76,8 @@ const LoginPage = () => {
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  autoCapitalize="none"
+                  autoCorrect="off"
                 />
                 <button
                   type="button"
@@ -87,6 +91,12 @@ const LoginPage = () => {
                   )}
                 </button>
               </div>
+            </div>
+
+            <div className="text-right mb-4">
+              <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                Forgot password?
+              </Link>
             </div>
 
             <button type="submit" className="btn btn-primary w-full" disabled={isLoggingIn}>

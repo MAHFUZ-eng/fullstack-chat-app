@@ -16,16 +16,28 @@ const userSchema = new mongoose.Schema(
       required: true,
       minlength: 6,
     },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verificationCode: String,
+    verificationCodeExpires: Date,
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
+    emailVisibility: {
+      type: String,
+      enum: ["everyone", "friends_only", "only_me"],
+      default: "everyone",
+    },
     profilePic: {
       type: String,
       default: "",
     },
-    friends: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
+    friends: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    lastActive: { type: Date, default: Date.now },
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date },
   },
   { timestamps: true }
 );

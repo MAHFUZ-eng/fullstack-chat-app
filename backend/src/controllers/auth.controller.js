@@ -429,3 +429,28 @@ export const resetPassword = async (req, res) => {
   }
 };
 
+
+export const setSecurityQuestion = async (req, res) => {
+  try {
+    const { securityQuestion, securityAnswer } = req.body;
+    const userId = req.user._id;
+
+    if (!securityQuestion || !securityAnswer) {
+      return res.status(400).json({ message: "Security question and answer are required" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedAnswer = await bcrypt.hash(securityAnswer.toLowerCase().trim(), salt);
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { securityQuestion, securityAnswer: hashedAnswer },
+      { new: true }
+    ).select("-password -securityAnswer");
+
+    res.status(200).json(updatedUser);
+  } catch (error) {
+    console.log("Error in setSecurityQuestion:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};

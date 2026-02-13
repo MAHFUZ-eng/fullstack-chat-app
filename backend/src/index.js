@@ -10,6 +10,7 @@ import { connectDB } from "./lib/db.js";
 import { startCleanupJobs } from "./lib/cleanup.js";
 
 import authRoutes from "./routes/auth.route.js";
+import adminRoutes from "./routes/admin.route.js";
 import messageRoutes from "./routes/message.route.js";
 import groupRoutes from "./routes/group.route.js";
 import friendRoutes from "./routes/friend.route.js";
@@ -32,6 +33,7 @@ app.use(
 );
 
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/friends", friendRoutes);

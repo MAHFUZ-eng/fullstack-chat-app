@@ -1,5 +1,5 @@
 import express from "express";
-import { checkAuth, login, logout, signup, updateProfile, deleteAccount, restoreAccount, blockUser, unblockUser, updateEmailVisibility, verifyEmail, forgotPassword, resetPassword } from "../controllers/auth.controller.js";
+import { checkAuth, login, logout, signup, updateProfile, deleteAccount, restoreAccount, blockUser, unblockUser, updateEmailVisibility, verifyEmail, forgotPassword, resetPassword, setSecurityQuestion } from "../controllers/auth.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
@@ -14,6 +14,7 @@ router.post("/reset-password", resetPassword);
 
 router.put("/update-profile", protectRoute, updateProfile);
 router.put("/update-email-visibility", protectRoute, updateEmailVisibility);
+router.put("/set-security-question", protectRoute, setSecurityQuestion);
 router.delete("/delete-account", protectRoute, deleteAccount);
 
 router.post("/block/:userId", protectRoute, blockUser);

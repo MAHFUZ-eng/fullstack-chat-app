@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { axiosInstance } from "../lib/axios";
 import { Package, Download, X } from "lucide-react";
 import packageJson from "../../package.json";

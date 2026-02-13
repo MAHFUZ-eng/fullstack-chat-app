@@ -14,6 +14,7 @@ import adminRoutes from "./routes/admin.route.js";
 import messageRoutes from "./routes/message.route.js";
 import groupRoutes from "./routes/group.route.js";
 import friendRoutes from "./routes/friend.route.js";
+import versionRoutes from "./routes/version.route.js";
 import { app, server } from "./lib/socket.js";
 
 dotenv.config();
@@ -37,6 +38,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/friends", friendRoutes);
+app.use("/api/version", versionRoutes);
 
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../../frontend/dist")));

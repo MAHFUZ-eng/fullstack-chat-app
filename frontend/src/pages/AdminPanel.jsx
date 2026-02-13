@@ -131,6 +131,70 @@ const AdminPanel = () => {
                     </div>
                 </div>
 
+                <div className="card bg-base-100 shadow-xl mb-6">
+                    <div className="card-body">
+                        <div className="flex items-center gap-2 mb-4">
+                            <RefreshCw className="size-6 text-primary" />
+                            <h2 className="card-title">Release Management</h2>
+                        </div>
+                        <p className="text-sm text-zinc-500 mb-4">
+                            Publish a new version of the app. Users will be prompted to update.
+                        </p>
+
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            const formData = new FormData(e.target);
+                            const data = {
+                                version: formData.get("version"),
+                                downloadUrl: formData.get("downloadUrl"),
+                                releaseNotes: formData.get("releaseNotes"),
+                                forceUpdate: formData.get("forceUpdate") === "on",
+                            };
+
+                            setIsLoading(true);
+                            axiosInstance.post(`/admin/version?token=${token}`, data)
+                                .then(() => {
+                                    toast.success("New version published successfully!");
+                                    e.target.reset();
+                                })
+                                .catch((err) => {
+                                    toast.error(err.response?.data?.message || "Failed to publish version");
+                                })
+                                .finally(() => setIsLoading(false));
+                        }}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="form-control">
+                                    <label className="label">
+                                        <span className="label-text">Version (e.g., 1.0.2)</span>
+                                    </label>
+                                    <input name="version" type="text" placeholder="1.0.2" className="input input-bordered" required />
+                                </div>
+                                <div className="form-control">
+                                    <label className="label">
+                                        <span className="label-text">Download URL (APK Link)</span>
+                                    </label>
+                                    <input name="downloadUrl" type="url" placeholder="https://..." className="input input-bordered" required />
+                                </div>
+                            </div>
+                            <div className="form-control mt-4">
+                                <label className="label">
+                                    <span className="label-text">Release Notes</span>
+                                </label>
+                                <textarea name="releaseNotes" className="textarea textarea-bordered h-24" placeholder="What's new in this update?"></textarea>
+                            </div>
+                            <div className="form-control mt-4">
+                                <label className="label cursor-pointer justify-start gap-4">
+                                    <span className="label-text">Force Update? (Important Security Fixes)</span>
+                                    <input name="forceUpdate" type="checkbox" className="checkbox checkbox-primary" />
+                                </label>
+                            </div>
+                            <button type="submit" className="btn btn-primary mt-4 w-full md:w-auto" disabled={isLoading}>
+                                Publish Update
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
                 <div className="card bg-base-100 shadow-xl">
                     <div className="card-body">
                         <h2 className="card-title">User List</h2>

@@ -22,6 +22,7 @@ import { Toaster } from "react-hot-toast";
 
 import BottomNav from "./components/BottomNav"; // Import BottomNav
 import FriendsPage from "./pages/FriendsPage"; // Import FriendsPage
+import UpdatePrompt from "./components/UpdatePrompt"; // Import UpdatePrompt
 
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth, onlineUsers } = useAuthStore();
@@ -70,6 +71,8 @@ const App = () => {
         <Route path="/profile" element={authUser ? <ProfilePage /> : <Navigate to="/login" />} />
         <Route path="/friends" element={authUser ? <FriendsPage /> : <Navigate to="/login" />} />
       </Routes>
+
+      <UpdatePrompt />
 
       {authUser && <BottomNav />}
 

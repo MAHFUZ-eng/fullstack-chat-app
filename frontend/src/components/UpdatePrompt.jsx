@@ -8,6 +8,9 @@ const UpdatePrompt = () => {
     const [versionInfo, setVersionInfo] = useState(null);
     const [isOpen, setIsOpen] = useState(false);
 
+    // Hide on admin panel
+    if (window.location.pathname.startsWith("/admin")) return null;
+
     useEffect(() => {
         checkVersion();
     }, []);

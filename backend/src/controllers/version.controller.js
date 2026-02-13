@@ -18,32 +18,52 @@ export const getLatestVersion = async (req, res) => {
 
 export const updateVersion = async (req, res) => {
     try {
+        console.log("updateVersion called with body:", req.body); // Debug log
         const { version, downloadUrl, releaseNotes, forceUpdate } = req.body;
 
         if (!version || !downloadUrl) {
+            console.log("Missing version or downloadUrl"); // Debug log
             return res.status(400).json({ message: "Version and Download URL are required" });
         }
 
         // Deactivate all previous versions to ensure only one is active
         await AppVersion.updateMany({}, { isActive: false });
 
-        const newVersion = new AppVersion({
-            version,
-            downloadUrl,
-            releaseNotes,
-            forceUpdate,
-            isActive: true,
-        });
+        // Check if this specific version already exists
+        const existingVersion = await AppVersion.findOne({ version });
 
-        await newVersion.save();
+        if (existingVersion) {
+            console.log("Updating existing version...");
+            existingVersion.downloadUrl = downloadUrl;
+            existingVersion.releaseNotes = releaseNotes;
+            existingVersion.forceUpdate = forceUpdate;
+            existingVersion.isActive = true;
+            await existingVersion.save();
 
-        res.status(201).json({
-            message: "Version updated successfully",
-            data: newVersion,
-        });
+            res.status(200).json({
+                message: "Version updated successfully",
+                data: existingVersion,
+            });
+        } else {
+            console.log("Creating new version...");
+            const newVersion = new AppVersion({
+                version,
+                downloadUrl,
+                releaseNotes,
+                forceUpdate,
+                isActive: true,
+            });
+
+            await newVersion.save();
+
+            res.status(201).json({
+                message: "Version updated successfully",
+                data: newVersion,
+            });
+        }
     } catch (error) {
-        console.log("Error in updateVersion controller", error.message);
-        res.status(500).json({ message: "Internal Server Error" });
+        console.log("Error in updateVersion controller", error); // Log full error object
+        res.status(500).json({ message: "Internal Server Error: " + error.message });
     }
 };
 

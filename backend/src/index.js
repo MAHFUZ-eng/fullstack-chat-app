@@ -33,6 +33,8 @@ app.use(
   })
 );
 
+
+
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/messages", messageRoutes);

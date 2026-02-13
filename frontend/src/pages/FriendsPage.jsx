@@ -112,7 +112,7 @@ const FriendsPage = () => {
                                     <div className="relative">
                                         <img
                                             src={request.sender?.profilePic || "/avatar.png"}
-                                            alt={request.sender.fullName}
+                                            alt={request.sender?.fullName || "User"}
                                             className="size-12 object-cover rounded-full"
                                         />
                                     </div>
@@ -154,7 +154,7 @@ const FriendsPage = () => {
                                     <div className="relative">
                                         <img
                                             src={request.receiver?.profilePic || "/avatar.png"}
-                                            alt={request.receiver.fullName}
+                                            alt={request.receiver?.fullName || "User"}
                                             className="size-12 object-cover rounded-full"
                                         />
                                     </div>

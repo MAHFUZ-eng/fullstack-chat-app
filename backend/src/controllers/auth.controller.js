@@ -355,6 +355,14 @@ export const forgotPassword = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    // Check if user has security question set
+    if (!user.securityQuestion || !user.securityAnswer) {
+      return res.status(400).json({ 
+        message: "This account was created before security questions were added. Please contact support or create a new account." 
+      });
+    }
+
+
     // If no answer provided, return the security question
     if (!securityAnswer) {
       return res.status(200).json({

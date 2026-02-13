@@ -111,14 +111,14 @@ const FriendsPage = () => {
                                 <div key={request._id} className="flex items-center gap-3 p-4 hover:bg-base-200 transition-colors">
                                     <div className="relative">
                                         <img
-                                            src={request.sender.profilePic || "/avatar.png"}
+                                            src={request.sender?.profilePic || "/avatar.png"}
                                             alt={request.sender.fullName}
                                             className="size-12 object-cover rounded-full"
                                         />
                                     </div>
                                     <div className="flex-1">
-                                        <h3 className="font-bold text-base">{request.sender.fullName}</h3>
-                                        <p className="text-sm text-zinc-500">{request.sender.email}</p>
+                                        <h3 className="font-bold text-base">{request.sender?.fullName || "Unknown User"}</h3>
+                                        <p className="text-sm text-zinc-500">{request.sender?.email || ""}</p>
                                     </div>
 
                                     <div className="flex gap-2">
@@ -153,13 +153,13 @@ const FriendsPage = () => {
                                 <div key={request._id} className="flex items-center gap-3 p-4 hover:bg-base-200 transition-colors">
                                     <div className="relative">
                                         <img
-                                            src={request.receiver.profilePic || "/avatar.png"}
+                                            src={request.receiver?.profilePic || "/avatar.png"}
                                             alt={request.receiver.fullName}
                                             className="size-12 object-cover rounded-full"
                                         />
                                     </div>
                                     <div className="flex-1">
-                                        <h3 className="font-bold text-base">{request.receiver.fullName}</h3>
+                                        <h3 className="font-bold text-base">{request.receiver?.fullName || "Unknown User"}</h3>
                                         <p className="text-sm text-zinc-500">Pending</p>
                                     </div>
 

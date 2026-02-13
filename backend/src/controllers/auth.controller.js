@@ -6,9 +6,9 @@ import { sendVerificationEmail, sendPasswordResetEmail } from "../lib/email.js";
 import crypto from "crypto";
 
 export const signup = async (req, res) => {
-  const { fullName, email, password } = req.body;
+  const { fullName, email, password, securityQuestion, securityAnswer } = req.body;
   try {
-    if (!fullName || !email || !password) {
+    if (!fullName || !email || !password || !securityQuestion || !securityAnswer) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -22,29 +22,27 @@ export const signup = async (req, res) => {
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const verificationCodeExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    const hashedAnswer = await bcrypt.hash(securityAnswer.toLowerCase().trim(), salt);
 
     const newUser = new User({
       fullName,
       email: email.toLowerCase(),
       password: hashedPassword,
-      verificationCode,
-      verificationCodeExpires,
-      isVerified: false
+      securityQuestion,
+      securityAnswer: hashedAnswer,
     });
 
     if (newUser) {
-      // Send verification email
-      await sendVerificationEmail(newUser.email, verificationCode);
       await newUser.save();
+
+      // Generate token and log user in immediately
+      generateToken(newUser._id, res);
 
       res.status(201).json({
         _id: newUser._id,
         fullName: newUser.fullName,
         email: newUser.email,
-        message: "Account created! Please verify your email.",
+        profilePic: newUser.profilePic,
       });
     } else {
       res.status(400).json({ message: "Invalid user data" });
@@ -66,10 +64,6 @@ export const login = async (req, res) => {
 
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
-    }
-
-    if (!user.isVerified) {
-      return res.status(400).json({ message: "Please verify your email first" });
     }
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
@@ -354,21 +348,42 @@ export const verifyEmail = async (req, res) => {
 
 export const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, securityAnswer, newPassword } = req.body;
     const user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
-    user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 mins
+    // If no answer provided, return the security question
+    if (!securityAnswer) {
+      return res.status(200).json({
+        securityQuestion: user.securityQuestion
+      });
+    }
 
-    await user.save();
-    await sendPasswordResetEmail(user.email, resetToken);
+    // Verify security answer
+    const isAnswerCorrect = await bcrypt.compare(securityAnswer.toLowerCase().trim(), user.securityAnswer);
 
-    res.status(200).json({ message: "Password reset code sent to your email" });
+    if (!isAnswerCorrect) {
+      return res.status(400).json({ message: "Incorrect security answer" });
+    }
+
+    // If answer is correct and new password provided, reset password
+    if (newPassword) {
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(newPassword, salt);
+      await user.save();
+
+      return res.status(200).json({ message: "Password reset successfully" });
+    }
+
+    // Answer is correct, allow user to reset password
+    res.status(200).json({ message: "Security answer verified" });
   } catch (error) {
     console.log("Error in forgotPassword controller", error.message);
     res.status(500).json({ message: "Internal Server Error" });
@@ -405,3 +420,4 @@ export const resetPassword = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+

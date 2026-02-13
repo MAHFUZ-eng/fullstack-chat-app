@@ -8,9 +8,5 @@
       "style": "dark",
       "scrollToBottomOnFocus": true
     }
-  },
-  "server": {
-    "url": "http://192.168.0.103:5177",
-    "cleartext": true
   }
 }

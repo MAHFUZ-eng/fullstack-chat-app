@@ -12,7 +12,17 @@ const SignUpPage = () => {
     fullName: "",
     email: "",
     password: "",
+    securityQuestion: "",
+    securityAnswer: "",
   });
+
+  const securityQuestions = [
+    "What was the name of your first pet?",
+    "What city were you born in?",
+    "What is your mother's maiden name?",
+    "What was the name of your first school?",
+    "What is your favorite book?"
+  ];
 
   const { signup, isSigningUp } = useAuthStore();
   const navigate = useNavigate();
@@ -23,6 +33,8 @@ const SignUpPage = () => {
     if (!/\S+@\S+\.\S+/.test(formData.email)) return toast.error("Invalid email format");
     if (!formData.password) return toast.error("Password is required");
     if (formData.password.length < 6) return toast.error("Password must be at least 6 characters");
+    if (!formData.securityQuestion) return toast.error("Security question is required");
+    if (!formData.securityAnswer.trim()) return toast.error("Security answer is required");
 
     return true;
   };
@@ -122,6 +134,40 @@ const SignUpPage = () => {
                   )}
                 </button>
               </div>
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Security Question</span>
+              </label>
+              <select
+                className="select select-bordered w-full"
+                value={formData.securityQuestion}
+                onChange={(e) => setFormData({ ...formData, securityQuestion: e.target.value })}
+              >
+                <option value="">Choose a question...</option>
+                {securityQuestions.map((q, i) => (
+                  <option key={i} value={q}>{q}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Security Answer</span>
+              </label>
+              <input
+                type="text"
+                className="input input-bordered w-full"
+                placeholder="Your answer"
+                value={formData.securityAnswer}
+                onChange={(e) => setFormData({ ...formData, securityAnswer: e.target.value })}
+                autoCapitalize="none"
+                autoCorrect="off"
+              />
+              <label className="label">
+                <span className="label-text-alt text-base-content/60">Used for password recovery</span>
+              </label>
             </div>
 
             <button type="submit" className="btn btn-primary w-full" disabled={isSigningUp}>

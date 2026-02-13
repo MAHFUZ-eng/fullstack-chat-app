@@ -16,14 +16,14 @@ const userSchema = new mongoose.Schema(
       required: true,
       minlength: 6,
     },
-    isVerified: {
-      type: Boolean,
-      default: false,
+    securityQuestion: {
+      type: String,
+      required: true,
     },
-    verificationCode: String,
-    verificationCodeExpires: Date,
-    resetPasswordToken: String,
-    resetPasswordExpires: Date,
+    securityAnswer: {
+      type: String,
+      required: true,
+    },
     emailVisibility: {
       type: String,
       enum: ["everyone", "friends_only", "only_me"],
